@@ -1,20 +1,19 @@
-import time
+import numpy as np
 
-from abc import ABC, abstractclassmethod
-
-
-class Automobile(ABC):
-    
-    tc = 10
-
-    @abstractclassmethod
-    def cross_bridge(self):
-        raise NotImplementedError
 
 class Car(object):
-    
-    def __init__(self):
-        pass
 
-    def cross_bridge(self):
-        pass
+    def __init__(self, name, bridge):
+        self.bridge = bridge
+        self._name = name
+
+    def __call__(self):
+        self.bridge.cross_bridge(self)
+    
+    @property
+    def name(self):
+        return self._name
+    
+    @name.setter
+    def name(self, new_name):
+        self._name = new_name

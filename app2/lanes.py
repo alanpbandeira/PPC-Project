@@ -7,13 +7,17 @@ import numpy as np
 class Lane(Thread):
 
     _MAX_CARS = 50
+    _MAX_TRUCKS = 3
+    _CAR_TYPE = ['C', 'T']
 
     def __init__(self, car_factory, daemon=False):
         super(Lane, self).__init__(daemon=daemon)
         self._cars = []
         self.car_factory = car_factory
-        self.left_count = 0
-        self.right_count = 0
+        self.cars_left = 0
+        self.cars_right = 0
+        self.trucks_left = 0
+        self.trucks_right = 0
         self.delta_arrival = 4
 
     def car_arrival(self, delta_time):
@@ -31,19 +35,19 @@ class Lane(Thread):
             if run_chance <= prob_range:
 
                 # Check if sides are available
-                if self.left_count == self._MAX_CARS:
+                if self.cars_left == self._MAX_CARS:
                     side = 'right'
-                elif self.right_count == self._MAX_CARS:
+                elif self.cars_right == self._MAX_CARS:
                     side = 'left'
                 else:
                     side = np.random.choice(['left', 'right'])
 
                 if side == 'right':
-                    car_id = self.right_count + 1
-                    self.right_count += 1
+                    car_id = self.cars_right + 1
+                    self.cars_right += 1
                 else:
-                    car_id = self.left_count + 1
-                    self.left_count += 1
+                    car_id = self.cars_left + 1
+                    self.cars_left += 1
 
                 new_car = self.car_factory.get_car(
                     id=car_id, lane_side=side
@@ -65,12 +69,12 @@ class Lane(Thread):
         initial_time = time.time()
 
         # Working control flags
-        arriving_car = True
-        empty_lane = True
+        arriving = True
+        empty = True
 
         while True:
 
-            if arriving_car:
+            if arriving:
                 # Get current time
                 current_time = time.time()
 
@@ -80,19 +84,19 @@ class Lane(Thread):
                 # If new car arrives reset elapsed time
                 if self.car_arrival(delta_time):
                     initial_time = current_time
-                    empty_lane = False
+                    empty = False
 
                 # Finish cars arrival
-                full_right = self.right_count == self._MAX_CARS
-                full_left = self.left_count == self._MAX_CARS
+                full_right = self.cars_right == self._MAX_CARS
+                full_left = self.cars_left == self._MAX_CARS
 
                 if full_right and full_left:
-                    arriving_car = False
+                    arriving = False
 
             # If cars on the lane, let the first car
             # in the queue try to cross the bridge
-            if not empty_lane:
-                time.sleep(2)
+            if not empty:
+                # time.sleep(2)
                 car = self._cars.pop()
                 new_thread = Thread(target=car, daemon=True)
                 new_thread.start()
@@ -100,9 +104,9 @@ class Lane(Thread):
 
             # Signal empty lane avoiding attempts to spam new cars
             if not self._cars:
-                empty_lane = True
+                empty = True
 
             # If all cars arrived and are
             # crossing the bridge the lane finishes
-            if not arriving_car and empty_lane:
+            if not arriving and empty:
                 break
